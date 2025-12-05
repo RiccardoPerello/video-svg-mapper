@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to SVG Shape Mapper</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main SVG Output Area -->
+        <div class="main-output">
+            <svg id="outputSvg"></svg>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🎥 Video to SVG Mapper</h1>
+            </div>
+
+            <!-- Video Input Section -->
+            <div class="sidebar-section video-section">
+                <h3>Media Input</h3>
+                <video id="video" autoplay muted playsinline></video>
+                <img id="imagePreview" style="display: none; width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                <p id="videoStatus">No media source</p>
+                <div class="control-group">
+                    <button id="startWebcam">Start Webcam</button>
+                    <button id="stopWebcam">Stop</button>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 11px; color: #666; margin-bottom: 5px;">Upload Video:</label>
+                    <input type="file" id="videoFile" accept="video/*">
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 11px; color: #666; margin-bottom: 5px;">Upload Image:</label>
+                    <input type="file" id="imageFile" accept="image/jpeg,image/jpg,image/png,image/webp">
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="sidebar-section">
+                <h3>Settings</h3>
+                <div class="control-group">
+                    <label>
+                        Resolution: <span id="resValue">50</span> cols
+                        <input type="range" id="resolution" min="20" max="150" value="50">
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        Shape Size: <span id="sizeValue">10</span>px
+                        <input type="range" id="shapeSize" min="5" max="30" value="10">
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="colorMode"> Use Color Mode
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <button id="copySvg" class="copy-button">
+                        📋 Copy Current Frame as SVG
+                    </button>
+                    <span id="copyFeedback" class="copy-feedback"></span>
+                </div>
+            </div>
+
+            <!-- Shape Palette Section -->
+            <div class="sidebar-section shape-editor">
+                <h3>Shape Palette</h3>
+                <p class="helper-text">
+                    Shapes map from darkest to lightest pixels
+                </p>
+                <div class="control-group">
+                    <input type="file" id="svgUpload" accept=".svg" multiple>
+                </div>
+                <div class="control-group">
+                    <button id="resetShapes">Reset</button>
+                    <button id="clearShapes">Clear All</button>
+                </div>
+                <div class="shape-list" id="shapeList"></div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="sidebar-section stats">
+                <div class="stat-item">
+                    <span class="stat-label">FPS:</span>
+                    <span id="fps">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Shapes:</span>
+                    <span id="shapeCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Palette:</span>
+                    <span id="shapePalette">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
