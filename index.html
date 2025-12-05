@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Mapping to SVG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-weight: bold;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .versions {
+            list-style: none;
+        }
+
+        .versions li {
+            margin-bottom: 15px;
+        }
+
+        .versions a {
+            color: #fff;
+            text-decoration: none;
+            display: inline-block;
+            padding: 5px 0;
+            transition: opacity 0.2s;
+        }
+
+        .versions a:hover {
+            opacity: 0.7;
+        }
+
+        .versions a::before {
+            content: '> ';
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video mapping to svg</h1>
+
+        <ul class="versions">
+            <li><a href="v1/Video to SVG Shape Mapper.html">Version 1 - Single File</a></li>
+            <li><a href="v1/video-to-svg-mapper/">Version 1 - Modular</a></li>
+            <li><a href="v2/Video to SVG Shape Mapper.html">Version 2 - Single File</a></li>
+            <li><a href="v2/video-to-svg-mapper/">Version 2 - Modular</a></li>
+        </ul>
+    </div>
+</body>
+</html>
