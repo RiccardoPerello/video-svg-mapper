@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to SVG Shape Mapper</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Video to SVG Shape Mapper</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <button id="startWebcam">Start Webcam</button>
+                <button id="stopWebcam">Stop Webcam</button>
+                <input type="file" id="videoFile" accept="video/*">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Resolution (Columns): <span id="resValue">50</span>
+                    <input type="range" id="resolution" min="20" max="150" value="50">
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Shape Size: <span id="sizeValue">10</span>px
+                    <input type="range" id="shapeSize" min="5" max="30" value="10">
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="colorMode"> Use Color (instead of brightness only)
+                </label>
+            </div>
+        </div>
+
+        <div class="shape-editor">
+            <h3>SVG Shape Palette (Sorted by Brightness Density)</h3>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">
+                Shapes are automatically mapped from darkest to lightest pixels. Upload custom SVG files or use the defaults!
+            </p>
+            <div class="control-group" style="margin-bottom: 15px;">
+                <input type="file" id="svgUpload" accept=".svg" multiple>
+                <button id="resetShapes">Reset to Defaults</button>
+                <button id="clearShapes">Clear All Shapes</button>
+            </div>
+            <div class="shape-list" id="shapeList"></div>
+        </div>
+
+        <div class="display-area">
+            <div class="video-container">
+                <h3>Video Input</h3>
+                <video id="video" autoplay muted playsinline></video>
+                <p id="videoStatus" style="color: #888; margin-top: 10px;">No video source selected</p>
+            </div>
+
+            <div class="output-container">
+                <h3>SVG Output</h3>
+                <svg id="outputSvg"></svg>
+            </div>
+        </div>
+
+        <div class="stats">
+            <span id="fps">FPS: 0</span> |
+            <span id="shapeCount">Shapes Rendered: 0</span> |
+            <span id="shapePalette">Shapes in Palette: 0</span>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
