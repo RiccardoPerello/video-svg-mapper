@@ -57,16 +57,32 @@
                 </div>
 
                 <div class="control-group">
-                    <label>
-                        <input type="checkbox" id="colorMode"> Use Color Mode
-                    </label>
-                </div>
-
-                <div class="control-group">
                     <button id="copySvg" class="copy-button">
                         📋 Copy Current Frame as SVG
                     </button>
                     <span id="copyFeedback" class="copy-feedback"></span>
+                </div>
+            </div>
+
+            <!-- Color Controls Section -->
+            <div class="sidebar-section">
+                <h3>Colors</h3>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="colorMode"> Use Color Mode
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        Background Color
+                        <input type="color" id="bgColor" value="#000000">
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        Shape Color
+                        <input type="color" id="shapeColor" value="#ffffff">
+                    </label>
                 </div>
             </div>
 

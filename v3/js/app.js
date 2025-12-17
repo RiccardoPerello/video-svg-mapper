@@ -66,6 +66,16 @@ function setupEventListeners() {
             processStaticImage();
         }
     });
+    document.getElementById('bgColor').addEventListener('input', (e) => {
+        // Update background color of main output area
+        document.querySelector('.main-output').style.background = e.target.value;
+    });
+    document.getElementById('shapeColor').addEventListener('input', () => {
+        // Re-process image if static image is loaded
+        if (currentMediaType === 'image' && currentImage) {
+            processStaticImage();
+        }
+    });
     document.getElementById('svgUpload').addEventListener('change', handleSvgUpload);
     document.getElementById('resetShapes').addEventListener('click', resetShapes);
     document.getElementById('clearShapes').addEventListener('click', clearShapes);
@@ -426,7 +436,8 @@ function processStaticImage() {
             const clampedIndex = Math.min(shapeIndex, shapes.length - 1);
 
             // Determine color based on mode
-            const color = useColor ? `rgb(${r}, ${g}, ${b})` : 'rgb(255, 255, 255)';
+            const shapeColorPicker = document.getElementById('shapeColor').value;
+            const color = useColor ? `rgb(${r}, ${g}, ${b})` : shapeColorPicker;
 
             // Parse the shape SVG string to extract shape elements
             const tempDiv = document.createElement('div');
@@ -560,7 +571,8 @@ function processFrame() {
                 const clampedIndex = Math.min(shapeIndex, shapes.length - 1);
 
                 // Determine color based on mode
-                const color = useColor ? `rgb(${r}, ${g}, ${b})` : 'rgb(255, 255, 255)';
+                const shapeColorPicker = document.getElementById('shapeColor').value;
+                const color = useColor ? `rgb(${r}, ${g}, ${b})` : shapeColorPicker;
 
                 // Parse the shape SVG string to extract shape elements
                 const tempDiv = document.createElement('div');
