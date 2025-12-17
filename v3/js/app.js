@@ -1,26 +1,6 @@
-// Default SVG shape palette (from darkest to lightest)
-const defaultShapes = [
-    // Darkest - filled circle
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="4.5" fill="currentColor"/></svg>',
-    // Very dark - filled square
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="8" height="8" fill="currentColor"/></svg>',
-    // Dark - filled triangle
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><polygon points="5,1 9,9 1,9" fill="currentColor"/></svg>',
-    // Medium-dark - star
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><path d="M5 1 L6 4 L9 4 L7 6 L8 9 L5 7 L2 9 L3 6 L1 4 L4 4 Z" fill="currentColor"/></svg>',
-    // Medium - cross
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><path d="M5 0 L5 10 M0 5 L10 5" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
-    // Medium-light - circle outline
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>',
-    // Light - small square
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="4" height="4" fill="currentColor"/></svg>',
-    // Very light - small dot
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="2" fill="currentColor"/></svg>',
-    // Lightest - tiny dot
-    '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="1" fill="currentColor"/></svg>',
-];
-
-let shapes = [...defaultShapes];
+// Default SVG shape palette (loaded from assets folder)
+let defaultShapes = [];
+let shapes = [];
 let video, imagePreview, outputSvg, canvas, ctx;
 let animationFrame;
 let isProcessing = false;
@@ -30,16 +10,96 @@ let currentMediaType = null; // 'video', 'webcam', or 'image'
 let currentImage = null; // Store the loaded image
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     video = document.getElementById('video');
     imagePreview = document.getElementById('imagePreview');
     outputSvg = document.getElementById('outputSvg');
     canvas = document.createElement('canvas');
     ctx = canvas.getContext('2d', { willReadTextFrequently: true });
 
+    // Load default shapes from assets folder
+    await loadDefaultShapes();
+
     renderShapeList();
     setupEventListeners();
 });
+
+// Load default SVG shapes from assets folder
+async function loadDefaultShapes() {
+    const shapeFiles = [
+        'square-01.svg', 'square-02.svg', 'square-03.svg', 'square-04.svg',
+        'square-05.svg', 'square-06.svg', 'square-07.svg', 'square-08.svg',
+        'square-09.svg', 'square-10.svg', 'square-11.svg', 'square-12.svg',
+        'square-13.svg', 'square-14.svg', 'square-15.svg', 'square-16.svg',
+        'square-17.svg', 'square-18.svg', 'square-19.svg', 'square-20.svg',
+        'square-21.svg', 'square-22.svg', 'square-23.svg', 'square-24.svg'
+    ];
+
+    for (const filename of shapeFiles) {
+        try {
+            const response = await fetch(`assets/${filename}`);
+            const svgText = await response.text();
+
+            // Parse and process the SVG
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svgElement = doc.querySelector('svg');
+
+            if (svgElement) {
+                // Extract all shape elements
+                const extractElements = (parent) => {
+                    let result = [];
+                    for (const child of parent.children) {
+                        if (child.tagName.toLowerCase() === 'g') {
+                            result = result.concat(extractElements(child));
+                        } else if (child.tagName.toLowerCase() === 'defs' ||
+                                  child.tagName.toLowerCase() === 'title' ||
+                                  child.tagName.toLowerCase() === 'desc') {
+                            continue;
+                        } else {
+                            const clone = child.cloneNode(true);
+                            if (clone.hasAttribute('fill')) {
+                                const fillValue = clone.getAttribute('fill');
+                                if (fillValue !== 'none') {
+                                    clone.setAttribute('fill', 'currentColor');
+                                }
+                            } else {
+                                clone.setAttribute('fill', 'currentColor');
+                            }
+                            if (clone.hasAttribute('stroke')) {
+                                const strokeValue = clone.getAttribute('stroke');
+                                if (strokeValue !== 'none') {
+                                    clone.setAttribute('stroke', 'currentColor');
+                                }
+                            }
+                            result.push(clone);
+                        }
+                    }
+                    return result;
+                };
+
+                const elements = extractElements(svgElement);
+                if (elements.length > 0) {
+                    let viewBox = svgElement.getAttribute('viewBox') || '0 0 10 10';
+                    if (!svgElement.hasAttribute('viewBox')) {
+                        const width = svgElement.getAttribute('width') || '10';
+                        const height = svgElement.getAttribute('height') || '10';
+                        viewBox = `0 0 ${width} ${height}`;
+                    }
+                    const shapeContent = elements.map(el => el.outerHTML).join('\n');
+                    const normalizedShape = `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">${shapeContent}</svg>`;
+                    defaultShapes.push(normalizedShape);
+                }
+            }
+        } catch (err) {
+            console.error(`Error loading ${filename}:`, err);
+        }
+    }
+
+    // Set shapes to default
+    shapes = [...defaultShapes];
+    console.log(`Loaded ${shapes.length} default shapes from assets folder`);
+}
 
 function setupEventListeners() {
     document.getElementById('startWebcam').addEventListener('click', startWebcam);
