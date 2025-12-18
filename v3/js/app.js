@@ -168,6 +168,12 @@ function setupEventListeners() {
             processStaticImage();
         }
     });
+    document.getElementById('invertBrightness').addEventListener('change', () => {
+        // Re-process image if static image is loaded
+        if (currentMediaType === 'image' && currentImage) {
+            processStaticImage();
+        }
+    });
     document.getElementById('svgUpload').addEventListener('change', handleSvgUpload);
     document.getElementById('resetShapes').addEventListener('click', resetShapes);
     document.getElementById('clearShapes').addEventListener('click', clearShapes);
@@ -481,6 +487,7 @@ function processStaticImage() {
     const cols = parseInt(document.getElementById('resolution').value);
     const shapeSize = parseInt(document.getElementById('shapeSize').value);
     const useColor = document.getElementById('colorMode').checked;
+    const invertBrightness = document.getElementById('invertBrightness').checked;
     const shapeColorPicker = document.getElementById('shapeColor').value; // Cache DOM query
 
     // Set canvas size to match image
@@ -538,8 +545,13 @@ function processStaticImage() {
             const brightness = (r + g + b) / 3;
 
             // Map brightness to shape index
-            const shapeIndex = Math.floor((brightness / 255) * shapesLen);
-            const clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
+            let shapeIndex = Math.floor((brightness / 255) * shapesLen);
+            let clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
+
+            // Invert if checkbox is checked
+            if (invertBrightness) {
+                clampedIndex = shapesLen - 1 - clampedIndex;
+            }
 
             // Determine color based on mode
             const color = useColor ? `rgb(${r},${g},${b})` : shapeColorPicker;
@@ -606,6 +618,7 @@ function processFrame() {
         const cols = parseInt(document.getElementById('resolution').value);
         const shapeSize = parseInt(document.getElementById('shapeSize').value);
         const useColor = document.getElementById('colorMode').checked;
+        const invertBrightness = document.getElementById('invertBrightness').checked;
         const shapeColorPicker = document.getElementById('shapeColor').value; // Cache DOM query
 
         // Set canvas size to match video
@@ -667,8 +680,13 @@ function processFrame() {
                 const brightness = (r + g + b) / 3;
 
                 // Map brightness to shape index
-                const shapeIndex = Math.floor((brightness / 255) * shapesLen);
-                const clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
+                let shapeIndex = Math.floor((brightness / 255) * shapesLen);
+                let clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
+
+                // Invert if checkbox is checked
+                if (invertBrightness) {
+                    clampedIndex = shapesLen - 1 - clampedIndex;
+                }
 
                 // Determine color based on mode
                 const color = useColor ? `rgb(${r},${g},${b})` : shapeColorPicker;
