@@ -1,6 +1,7 @@
 // Default SVG shape palette (loaded from assets folder)
 let defaultShapes = [];
 let shapes = [];
+let parsedShapes = []; // Cache of parsed SVG elements for performance
 let video, imagePreview, outputSvg, canvas, ctx;
 let animationFrame;
 let isProcessing = false;
@@ -99,6 +100,37 @@ async function loadDefaultShapes() {
     // Set shapes to default
     shapes = [...defaultShapes];
     console.log(`Loaded ${shapes.length} default shapes from assets folder`);
+
+    // Pre-parse all shapes for performance
+    parseAndCacheShapes();
+}
+
+// Parse all shapes once and cache them for fast access
+function parseAndCacheShapes() {
+    parsedShapes = shapes.map(shapeString => {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = shapeString;
+        const shapeSvg = tempDiv.querySelector('svg');
+
+        if (!shapeSvg) return null;
+
+        // Extract viewBox
+        const viewBox = shapeSvg.getAttribute('viewBox')?.split(' ').map(Number) || [0, 0, 10, 10];
+        const [vbX, vbY, vbWidth, vbHeight] = viewBox;
+
+        // Extract shape elements (excluding metadata)
+        const shapeElements = Array.from(shapeSvg.children).filter(child => {
+            const tagName = child.tagName.toLowerCase();
+            return !['defs', 'title', 'desc', 'metadata'].includes(tagName);
+        });
+
+        return {
+            viewBox: { x: vbX, y: vbY, width: vbWidth, height: vbHeight },
+            elements: shapeElements
+        };
+    }).filter(shape => shape !== null);
+
+    console.log(`Cached ${parsedShapes.length} parsed shapes`);
 }
 
 function setupEventListeners() {
@@ -178,6 +210,7 @@ function renderShapeList() {
         btn.addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
             shapes.splice(index, 1);
+            parseAndCacheShapes(); // Update cache
             renderShapeList();
         });
     });
@@ -272,18 +305,21 @@ async function handleSvgUpload(e) {
         }
     }
 
+    parseAndCacheShapes(); // Update cache after uploading new shapes
     renderShapeList();
     e.target.value = ''; // Reset file input
 }
 
 function resetShapes() {
     shapes = [...defaultShapes];
+    parseAndCacheShapes(); // Update cache
     renderShapeList();
 }
 
 function clearShapes() {
     if (confirm('Are you sure you want to clear all shapes?')) {
         shapes = [];
+        parseAndCacheShapes(); // Update cache
         renderShapeList();
     }
 }
@@ -445,6 +481,7 @@ function processStaticImage() {
     const cols = parseInt(document.getElementById('resolution').value);
     const shapeSize = parseInt(document.getElementById('shapeSize').value);
     const useColor = document.getElementById('colorMode').checked;
+    const shapeColorPicker = document.getElementById('shapeColor').value; // Cache DOM query
 
     // Set canvas size to match image
     canvas.width = currentImage.width;
@@ -459,9 +496,11 @@ function processStaticImage() {
     const rows = Math.floor(canvas.height / cellHeight);
 
     // Set SVG size
-    outputSvg.setAttribute('width', cols * shapeSize);
-    outputSvg.setAttribute('height', rows * shapeSize);
-    outputSvg.setAttribute('viewBox', `0 0 ${cols * shapeSize} ${rows * shapeSize}`);
+    const svgWidth = cols * shapeSize;
+    const svgHeight = rows * shapeSize;
+    outputSvg.setAttribute('width', svgWidth);
+    outputSvg.setAttribute('height', svgHeight);
+    outputSvg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
 
     // Clear SVG
     outputSvg.innerHTML = '';
@@ -469,87 +508,78 @@ function processStaticImage() {
     let shapeCount = 0;
 
     // Check if we have shapes to work with
-    if (shapes.length === 0) {
+    if (parsedShapes.length === 0) {
         outputSvg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="white" font-size="20">No shapes loaded! Upload SVG files or reset to defaults.</text>';
         document.getElementById('shapeCount').textContent = '0';
         return;
     }
 
-    // Process each cell
+    // Get ALL image data at once - MAJOR optimization
+    const fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const canvasWidth = canvas.width;
+
+    // Use DocumentFragment for batch DOM updates
+    const fragment = document.createDocumentFragment();
+    const shapesLen = parsedShapes.length;
+
+    // Process each cell with pre-fetched image data
     for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-            const x = col * cellWidth;
-            const y = row * cellHeight;
+            // Sample from center of cell
+            const sampleX = Math.floor(col * cellWidth + cellWidth / 2);
+            const sampleY = Math.floor(row * cellHeight + cellHeight / 2);
+            const pixelIndex = (sampleY * canvasWidth + sampleX) * 4;
 
-            // Sample pixel data from center of cell
-            const sampleX = Math.floor(x + cellWidth / 2);
-            const sampleY = Math.floor(y + cellHeight / 2);
-
-            const imageData = ctx.getImageData(sampleX, sampleY, 1, 1);
-            const [r, g, b] = imageData.data;
+            const r = fullImageData[pixelIndex];
+            const g = fullImageData[pixelIndex + 1];
+            const b = fullImageData[pixelIndex + 2];
 
             // Calculate brightness (0-255)
             const brightness = (r + g + b) / 3;
 
             // Map brightness to shape index
-            const shapeIndex = Math.floor((brightness / 255) * shapes.length);
-            const clampedIndex = Math.min(shapeIndex, shapes.length - 1);
+            const shapeIndex = Math.floor((brightness / 255) * shapesLen);
+            const clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
 
             // Determine color based on mode
-            const shapeColorPicker = document.getElementById('shapeColor').value;
-            const color = useColor ? `rgb(${r}, ${g}, ${b})` : shapeColorPicker;
+            const color = useColor ? `rgb(${r},${g},${b})` : shapeColorPicker;
 
-            // Parse the shape SVG string to extract shape elements
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = shapes[clampedIndex];
-            const shapeSvg = tempDiv.querySelector('svg');
+            // Use cached parsed shape
+            const cachedShape = parsedShapes[clampedIndex];
+            const vb = cachedShape.viewBox;
+            const elements = cachedShape.elements;
 
-            if (shapeSvg) {
-                // Get viewBox for scaling calculation
-                const viewBox = shapeSvg.getAttribute('viewBox')?.split(' ').map(Number) || [0, 0, 10, 10];
-                const [vbX, vbY, vbWidth, vbHeight] = viewBox;
+            // Pre-calculate scale factors
+            const scaleX = shapeSize / vb.width;
+            const scaleY = shapeSize / vb.height;
+            const translateX = col * shapeSize - (vb.x * scaleX);
+            const translateY = row * shapeSize - (vb.y * scaleY);
+            const transform = `translate(${translateX},${translateY}) scale(${scaleX},${scaleY})`;
 
-                // Calculate scale factors
-                const scaleX = shapeSize / vbWidth;
-                const scaleY = shapeSize / vbHeight;
+            // Clone and transform each shape element
+            const elemLen = elements.length;
+            for (let i = 0; i < elemLen; i++) {
+                const clonedElement = elements[i].cloneNode(true);
+                clonedElement.setAttribute('transform', transform);
 
-                // Get all shape elements from the SVG (excluding defs, title, desc)
-                const shapeElements = Array.from(shapeSvg.children).filter(child => {
-                    const tagName = child.tagName.toLowerCase();
-                    return !['defs', 'title', 'desc', 'metadata'].includes(tagName);
-                });
+                // Simplified color application
+                const fill = clonedElement.getAttribute('fill');
+                if (!fill || fill === 'currentColor' || (fill !== 'none')) {
+                    clonedElement.setAttribute('fill', color);
+                }
 
-                // Clone and transform each shape element
-                shapeElements.forEach(element => {
-                    const clonedElement = element.cloneNode(true);
+                if (clonedElement.getAttribute('stroke') === 'currentColor') {
+                    clonedElement.setAttribute('stroke', color);
+                }
 
-                    // Build transform: translate to position, then scale from viewBox
-                    const translateX = col * shapeSize - (vbX * scaleX);
-                    const translateY = row * shapeSize - (vbY * scaleY);
-                    const transform = `translate(${translateX}, ${translateY}) scale(${scaleX}, ${scaleY})`;
-
-                    clonedElement.setAttribute('transform', transform);
-
-                    // Apply color to fill and stroke
-                    if (clonedElement.hasAttribute('fill') && clonedElement.getAttribute('fill') !== 'none') {
-                        clonedElement.setAttribute('fill', color);
-                    } else if (clonedElement.getAttribute('fill') === 'currentColor') {
-                        clonedElement.setAttribute('fill', color);
-                    } else if (!clonedElement.hasAttribute('fill')) {
-                        clonedElement.setAttribute('fill', color);
-                    }
-
-                    if (clonedElement.hasAttribute('stroke') && clonedElement.getAttribute('stroke') === 'currentColor') {
-                        clonedElement.setAttribute('stroke', color);
-                    }
-
-                    // Add directly to output SVG (no group wrapper!)
-                    outputSvg.appendChild(clonedElement);
-                    shapeCount++;
-                });
+                fragment.appendChild(clonedElement);
+                shapeCount++;
             }
         }
     }
+
+    // Single DOM update
+    outputSvg.appendChild(fragment);
 
     // Update stats
     document.getElementById('fps').textContent = '-';
@@ -576,6 +606,7 @@ function processFrame() {
         const cols = parseInt(document.getElementById('resolution').value);
         const shapeSize = parseInt(document.getElementById('shapeSize').value);
         const useColor = document.getElementById('colorMode').checked;
+        const shapeColorPicker = document.getElementById('shapeColor').value; // Cache DOM query
 
         // Set canvas size to match video
         if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
@@ -592,9 +623,11 @@ function processFrame() {
         const rows = Math.floor(canvas.height / cellHeight);
 
         // Set SVG size
-        outputSvg.setAttribute('width', cols * shapeSize);
-        outputSvg.setAttribute('height', rows * shapeSize);
-        outputSvg.setAttribute('viewBox', `0 0 ${cols * shapeSize} ${rows * shapeSize}`);
+        const svgWidth = cols * shapeSize;
+        const svgHeight = rows * shapeSize;
+        outputSvg.setAttribute('width', svgWidth);
+        outputSvg.setAttribute('height', svgHeight);
+        outputSvg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
 
         // Clear SVG
         outputSvg.innerHTML = '';
@@ -602,7 +635,7 @@ function processFrame() {
         let shapeCount = 0;
 
         // Check if we have shapes to work with
-        if (shapes.length === 0) {
+        if (parsedShapes.length === 0) {
             outputSvg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="white" font-size="20">No shapes loaded! Upload SVG files or reset to defaults.</text>';
             document.getElementById('fps').textContent = fps;
             document.getElementById('shapeCount').textContent = '0';
@@ -610,81 +643,72 @@ function processFrame() {
             return;
         }
 
-        // Process each cell
+        // Get ALL image data at once - MAJOR optimization
+        const fullImageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const canvasWidth = canvas.width;
+
+        // Use DocumentFragment for batch DOM updates
+        const fragment = document.createDocumentFragment();
+        const shapesLen = parsedShapes.length;
+
+        // Process each cell with pre-fetched image data
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                const x = col * cellWidth;
-                const y = row * cellHeight;
+                // Sample from center of cell
+                const sampleX = Math.floor(col * cellWidth + cellWidth / 2);
+                const sampleY = Math.floor(row * cellHeight + cellHeight / 2);
+                const pixelIndex = (sampleY * canvasWidth + sampleX) * 4;
 
-                // Sample pixel data from center of cell
-                const sampleX = Math.floor(x + cellWidth / 2);
-                const sampleY = Math.floor(y + cellHeight / 2);
-
-                const imageData = ctx.getImageData(sampleX, sampleY, 1, 1);
-                const [r, g, b] = imageData.data;
+                const r = fullImageData[pixelIndex];
+                const g = fullImageData[pixelIndex + 1];
+                const b = fullImageData[pixelIndex + 2];
 
                 // Calculate brightness (0-255)
                 const brightness = (r + g + b) / 3;
 
                 // Map brightness to shape index
-                const shapeIndex = Math.floor((brightness / 255) * shapes.length);
-                const clampedIndex = Math.min(shapeIndex, shapes.length - 1);
+                const shapeIndex = Math.floor((brightness / 255) * shapesLen);
+                const clampedIndex = shapeIndex >= shapesLen ? shapesLen - 1 : shapeIndex;
 
                 // Determine color based on mode
-                const shapeColorPicker = document.getElementById('shapeColor').value;
-                const color = useColor ? `rgb(${r}, ${g}, ${b})` : shapeColorPicker;
+                const color = useColor ? `rgb(${r},${g},${b})` : shapeColorPicker;
 
-                // Parse the shape SVG string to extract shape elements
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = shapes[clampedIndex];
-                const shapeSvg = tempDiv.querySelector('svg');
+                // Use cached parsed shape
+                const cachedShape = parsedShapes[clampedIndex];
+                const vb = cachedShape.viewBox;
+                const elements = cachedShape.elements;
 
-                if (shapeSvg) {
-                    // Get viewBox for scaling calculation
-                    const viewBox = shapeSvg.getAttribute('viewBox')?.split(' ').map(Number) || [0, 0, 10, 10];
-                    const [vbX, vbY, vbWidth, vbHeight] = viewBox;
+                // Pre-calculate scale factors
+                const scaleX = shapeSize / vb.width;
+                const scaleY = shapeSize / vb.height;
+                const translateX = col * shapeSize - (vb.x * scaleX);
+                const translateY = row * shapeSize - (vb.y * scaleY);
+                const transform = `translate(${translateX},${translateY}) scale(${scaleX},${scaleY})`;
 
-                    // Calculate scale factors
-                    const scaleX = shapeSize / vbWidth;
-                    const scaleY = shapeSize / vbHeight;
+                // Clone and transform each shape element
+                const elemLen = elements.length;
+                for (let i = 0; i < elemLen; i++) {
+                    const clonedElement = elements[i].cloneNode(true);
+                    clonedElement.setAttribute('transform', transform);
 
-                    // Get all shape elements from the SVG (excluding defs, title, desc)
-                    const shapeElements = Array.from(shapeSvg.children).filter(child => {
-                        const tagName = child.tagName.toLowerCase();
-                        return !['defs', 'title', 'desc', 'metadata'].includes(tagName);
-                    });
+                    // Simplified color application
+                    const fill = clonedElement.getAttribute('fill');
+                    if (!fill || fill === 'currentColor' || (fill !== 'none')) {
+                        clonedElement.setAttribute('fill', color);
+                    }
 
-                    // Clone and transform each shape element
-                    shapeElements.forEach(element => {
-                        const clonedElement = element.cloneNode(true);
+                    if (clonedElement.getAttribute('stroke') === 'currentColor') {
+                        clonedElement.setAttribute('stroke', color);
+                    }
 
-                        // Build transform: translate to position, then scale from viewBox
-                        const translateX = col * shapeSize - (vbX * scaleX);
-                        const translateY = row * shapeSize - (vbY * scaleY);
-                        const transform = `translate(${translateX}, ${translateY}) scale(${scaleX}, ${scaleY})`;
-
-                        clonedElement.setAttribute('transform', transform);
-
-                        // Apply color to fill and stroke
-                        if (clonedElement.hasAttribute('fill') && clonedElement.getAttribute('fill') !== 'none') {
-                            clonedElement.setAttribute('fill', color);
-                        } else if (clonedElement.getAttribute('fill') === 'currentColor') {
-                            clonedElement.setAttribute('fill', color);
-                        } else if (!clonedElement.hasAttribute('fill')) {
-                            clonedElement.setAttribute('fill', color);
-                        }
-
-                        if (clonedElement.hasAttribute('stroke') && clonedElement.getAttribute('stroke') === 'currentColor') {
-                            clonedElement.setAttribute('stroke', color);
-                        }
-
-                        // Add directly to output SVG (no group wrapper!)
-                        outputSvg.appendChild(clonedElement);
-                        shapeCount++;
-                    });
+                    fragment.appendChild(clonedElement);
+                    shapeCount++;
                 }
             }
         }
+
+        // Single DOM update
+        outputSvg.appendChild(fragment);
 
         // Update stats
         document.getElementById('fps').textContent = fps;
