@@ -138,6 +138,8 @@ function setupEventListeners() {
     document.getElementById('stopWebcam').addEventListener('click', stopVideo);
     document.getElementById('videoFile').addEventListener('change', handleVideoFile);
     document.getElementById('imageFile').addEventListener('change', handleImageFile);
+    document.getElementById('clearVideo').addEventListener('click', clearVideoFile);
+    document.getElementById('clearImage').addEventListener('click', clearImageFile);
     document.getElementById('resolution').addEventListener('input', (e) => {
         document.getElementById('resValue').textContent = e.target.value;
         // Re-process image if static image is loaded
@@ -413,6 +415,9 @@ function handleVideoFile(e) {
         document.getElementById('startWebcam').disabled = true;
         document.getElementById('stopWebcam').disabled = false;
 
+        // Show clear button
+        document.getElementById('clearVideo').style.display = 'flex';
+
         video.addEventListener('loadedmetadata', () => {
             startProcessing();
         });
@@ -435,6 +440,9 @@ function handleImageFile(e) {
                 document.getElementById('videoStatus').textContent = 'Image loaded: ' + file.name;
                 document.getElementById('startWebcam').disabled = true;
                 document.getElementById('stopWebcam').disabled = false;
+
+                // Show clear button
+                document.getElementById('clearImage').style.display = 'flex';
 
                 // Process the static image
                 processStaticImage();
@@ -462,6 +470,10 @@ function stopMedia() {
     imagePreview.src = '';
     currentImage = null;
 
+    // Hide clear buttons
+    document.getElementById('clearVideo').style.display = 'none';
+    document.getElementById('clearImage').style.display = 'none';
+
     // Reset UI
     document.getElementById('videoStatus').textContent = 'No media source';
     document.getElementById('startWebcam').disabled = false;
@@ -479,6 +491,38 @@ function stopMedia() {
 // For backward compatibility
 function stopVideo() {
     stopMedia();
+}
+
+function clearVideoFile() {
+    const videoFileInput = document.getElementById('videoFile');
+
+    // Stop and clear if video is loaded
+    if (currentMediaType === 'video') {
+        stopMedia();
+        outputSvg.innerHTML = '';
+    }
+
+    // Reset the file input
+    videoFileInput.value = '';
+
+    // Hide the clear button
+    document.getElementById('clearVideo').style.display = 'none';
+}
+
+function clearImageFile() {
+    const imageFileInput = document.getElementById('imageFile');
+
+    // Stop and clear if image is loaded
+    if (currentMediaType === 'image') {
+        stopMedia();
+        outputSvg.innerHTML = '';
+    }
+
+    // Reset the file input
+    imageFileInput.value = '';
+
+    // Hide the clear button
+    document.getElementById('clearImage').style.display = 'none';
 }
 
 function processStaticImage() {

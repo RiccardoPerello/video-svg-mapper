@@ -31,11 +31,17 @@
                 </div>
                 <div class="control-group">
                     <label style="font-size: 11px; color: #666; margin-bottom: 5px;">Upload Video:</label>
-                    <input type="file" id="videoFile" accept="video/*">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="file" id="videoFile" accept="video/*" style="flex: 1;">
+                        <button id="clearVideo" class="clear-file-btn" style="display: none;">×</button>
+                    </div>
                 </div>
                 <div class="control-group">
                     <label style="font-size: 11px; color: #666; margin-bottom: 5px;">Upload Image:</label>
-                    <input type="file" id="imageFile" accept="image/jpeg,image/jpg,image/png,image/webp">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="file" id="imageFile" accept="image/jpeg,image/jpg,image/png,image/webp" style="flex: 1;">
+                        <button id="clearImage" class="clear-file-btn" style="display: none;">×</button>
+                    </div>
                 </div>
             </div>
 
